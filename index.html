@@ -1,897 +1,636 @@
 <!DOCTYPE html>
-<html lang="en" class="light">
+<html lang="si">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>UniSync - Schedule Manager</title>
-    
-    <!-- PWA Meta Tags -->
-    <meta name="theme-color" content="#4f46e5">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="https://placehold.co/192x192/4f46e5/white?text=US">
-    <link rel="manifest" href="data:application/manifest+json;charset=utf-8,%7B%22name%22%3A%22UniSync%22%2C%22short_name%22%3A%22UniSync%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23ffffff%22%2C%22theme_color%22%3A%22%234f46e5%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22https%3A%2F%2Fplacehold.co%2F192x192%2F4f46e5%2Fwhite%3Ftext%3DUS%22%2C%22sizes%22%3A%22192x192%22%2C%22type%22%3A%22image%2Fpng%22%7D%2C%7B%22src%22%3A%22https%3A%2F%2Fplacehold.co%2F512x512%2F4f46e5%2Fwhite%3Ftext%3DUS%22%2C%22sizes%22%3A%22512x512%22%2C%22type%22%3A%22image%2Fpng%22%7D%5D%7D">
-
-    <!-- Tailwind CSS -->
+    <title>කාර්ය කළමනාකරු (Task Manager)</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Phosphor Icons -->
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
-
-    <!-- Tailwind Config for Custom Colors/Fonts -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Sinhala:wght@400;600;700&display=swap" rel="stylesheet">
     <script>
         tailwind.config = {
-            darkMode: 'class',
             theme: {
                 extend: {
-                    colors: {
-                        primary: '#4f46e5',
-                        secondary: '#10b981',
-                        danger: '#ef4444',
-                        warning: '#f59e0b',
-                        surface: '#ffffff',
-                        background: '#f3f4f6',
-                        darkBg: '#111827',
-                        darkSurface: '#1f2937'
-                    },
                     fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
+                        sans: ['"Noto Sans Sinhala"', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: '#4F46E5', // Indigo 600
+                        secondary: '#10B981', // Emerald 500
+                        accent: '#F59E0B', // Amber 500
+                        background: '#F3F4F6', // Gray 100
+                        surface: '#FFFFFF',
+                        textMain: '#1F2937', // Gray 800
+                        textMuted: '#6B7280', // Gray 500
+                        danger: '#EF4444' // Red 500
                     }
                 }
             }
         }
     </script>
-
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
-        .dark ::-webkit-scrollbar-thumb { background-color: #475569; }
-
-        /* Smooth Transitions */
-        .page-transition {
-            transition: transform 0.3s ease, opacity 0.3s ease;
+        body {
+            background-color: theme('colors.background');
+            color: theme('colors.textMain');
+            -webkit-tap-highlight-color: transparent;
         }
         
-        .page-hidden {
+        /* Hide scrollbar for clean mobile look */
+        ::-webkit-scrollbar {
             display: none;
-            opacity: 0;
-            transform: translateY(10px);
         }
         
-        .page-active {
-            display: block;
-            opacity: 1;
-            transform: translateY(0);
-            animation: fadeIn 0.3s ease forwards;
+        .page {
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
         }
-
+        
+        .page.active {
+            display: block;
+        }
+        
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
-
-        @keyframes slideUpModal {
-            from { transform: translateY(100%); }
-            to { transform: translateY(0); }
-        }
-
-        .modal-active > div {
-            animation: slideUpModal 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-
-        /* Native Date Picker Styling tweaks */
-        input[type="datetime-local"]::-webkit-calendar-picker-indicator {
-            cursor: pointer;
-            filter: invert(0.5);
-        }
-        .dark input[type="datetime-local"]::-webkit-calendar-picker-indicator {
-            filter: invert(0.8);
-        }
         
-        body {
-            -webkit-tap-highlight-color: transparent;
+        /* Custom styling for date/time inputs to look better on mobile */
+        input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+            background: transparent;
+            bottom: 0;
+            color: transparent;
+            cursor: pointer;
+            height: auto;
+            left: 0;
+            position: absolute;
+            right: 0;
+            top: 0;
+            width: auto;
         }
     </style>
 </head>
-<body class="bg-background dark:bg-darkBg text-gray-800 dark:text-gray-100 font-sans transition-colors duration-300 antialiased selection:bg-primary selection:text-white flex flex-col h-screen overflow-hidden">
+<body class="pb-20 h-screen overflow-y-auto">
 
-    <!-- Top Bar -->
-    <header class="bg-surface dark:bg-darkSurface shadow-sm z-10 px-4 py-3 flex justify-between items-center safe-top sticky top-0">
-        <div class="flex items-center gap-2">
-            <div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white font-bold text-xl">
-                U
-            </div>
-            <h1 class="text-xl font-bold tracking-tight">UniSync</h1>
-        </div>
-        <div class="flex items-center gap-3">
-            <button id="themeToggle" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                <i class="ph ph-moon text-xl" id="themeIcon"></i>
-            </button>
-            <button id="notificationToggle" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors relative">
-                <i class="ph ph-bell text-xl"></i>
-                <span id="notificationBadge" class="absolute top-1 right-1 w-2.5 h-2.5 bg-danger rounded-full hidden"></span>
-            </button>
-        </div>
+    <header class="bg-primary text-white p-4 shadow-md sticky top-0 z-50 flex justify-between items-center">
+        <h1 class="text-xl font-bold flex items-center gap-2">
+            <i class="fa-solid fa-calendar-check"></i> කාර්ය කළමනාකරු
+        </h1>
+        <button id="request-notification-btn" class="text-sm bg-white text-primary px-3 py-1 rounded-full shadow hover:bg-gray-100 transition" onclick="requestNotificationPermission()">
+            <i class="fa-solid fa-bell"></i> දැනුම්දීම්
+        </button>
     </header>
 
-    <!-- Main Content Area -->
-    <main class="flex-1 overflow-y-auto pb-20 relative" id="mainContainer">
+    <main class="p-4 max-w-md mx-auto">
         
-        <!-- View: Dashboard (Home) -->
-        <section id="view-home" class="page-active p-4 space-y-6">
+        <div id="home-page" class="page active">
+            <div class="flex justify-between items-end mb-4">
+                <h2 class="text-lg font-semibold text-textMain">ඉදිරි කාර්යයන්</h2>
+                <div class="text-sm text-textMuted" id="current-date-display"></div>
+            </div>
             
-            <!-- Greeting & Stats -->
-            <div class="space-y-1">
-                <h2 class="text-2xl font-bold" id="greetingText">Good Morning,</h2>
-                <p class="text-gray-500 dark:text-gray-400 text-sm">You have <span id="pendingCount" class="font-semibold text-primary">0</span> tasks pending today.</p>
+            <div class="mb-4">
+                <input type="text" id="search-input" placeholder="කාර්යයන් සොයන්න..." class="w-full p-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary shadow-sm bg-surface">
             </div>
 
-            <!-- Quick Filters -->
-            <div class="flex overflow-x-auto pb-2 gap-2 hide-scrollbar -mx-4 px-4">
-                <button class="filter-btn active px-4 py-2 rounded-full bg-primary text-white text-sm font-medium whitespace-nowrap transition-colors" data-filter="all">All</button>
-                <button class="filter-btn px-4 py-2 rounded-full bg-surface dark:bg-darkSurface border border-gray-200 dark:border-gray-700 text-sm font-medium whitespace-nowrap hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors" data-filter="academic">Academic</button>
-                <button class="filter-btn px-4 py-2 rounded-full bg-surface dark:bg-darkSurface border border-gray-200 dark:border-gray-700 text-sm font-medium whitespace-nowrap hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors" data-filter="notice">Notices</button>
-                <button class="filter-btn px-4 py-2 rounded-full bg-surface dark:bg-darkSurface border border-gray-200 dark:border-gray-700 text-sm font-medium whitespace-nowrap hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors" data-filter="personal">Personal</button>
-            </div>
-
-            <!-- Upcoming List -->
-            <div class="space-y-3">
-                <div class="flex justify-between items-end mb-2">
-                    <h3 class="text-lg font-semibold">Upcoming</h3>
+            <div id="task-list" class="space-y-3 pb-6">
+                <div class="text-center text-textMuted py-10" id="empty-state">
+                    <i class="fa-solid fa-clipboard-list text-4xl mb-3 opacity-50"></i>
+                    <p>කාර්යයන් කිසිවක් නැත.<br>නව කාර්යයක් එක් කිරීමට '+' බොත්තම ඔබන්න.</p>
                 </div>
+            </div>
+        </div>
+
+        <div id="form-page" class="page">
+            <div class="flex items-center gap-3 mb-6">
+                <button onclick="navigate('home')" class="text-textMain hover:text-primary p-2">
+                    <i class="fa-solid fa-arrow-left text-xl"></i>
+                </button>
+                <h2 class="text-xl font-bold text-textMain" id="form-title">නව කාර්යයක් එක් කරන්න</h2>
+            </div>
+
+            <form id="task-form" class="space-y-4 bg-surface p-5 rounded-2xl shadow-sm border border-gray-100">
+                <input type="hidden" id="task-id">
                 
-                <div id="taskList" class="space-y-3">
-                    <!-- Tasks will be rendered here -->
-                    <div class="text-center py-10 text-gray-500 dark:text-gray-400" id="emptyState">
-                        <i class="ph ph-folder-open text-4xl mb-2 opacity-50"></i>
-                        <p>No tasks found. Tap '+' to add one.</p>
-                    </div>
+                <div>
+                    <label class="block text-sm font-medium text-textMain mb-1">මාතෘකාව / කාර්යය *</label>
+                    <input type="text" id="task-title" required placeholder="උදා: මෘදුකාංග ඉංජිනේරු අනුයුක්තිය" class="w-full p-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary bg-gray-50">
                 </div>
-            </div>
-        </section>
 
-        <!-- View: Calendar -->
-        <section id="view-calendar" class="page-hidden p-4">
-            <h2 class="text-2xl font-bold mb-4">Calendar View</h2>
-            <div class="bg-surface dark:bg-darkSurface rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-4">
-                 <p class="text-center text-gray-500 py-10">
-                     <i class="ph ph-calendar-blank text-4xl mb-2 block"></i>
-                     Calendar implementation goes here. <br> <span class="text-sm">(Simplified for this demo, see Dashboard for list)</span>
-                 </p>
-            </div>
-        </section>
+                <div>
+                    <label class="block text-sm font-medium text-textMain mb-1">වර්ගය</label>
+                    <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="task-type" value="Assignment" checked class="peer sr-only">
+                            <div class="text-center p-2 rounded-xl border border-gray-200 peer-checked:bg-primary peer-checked:text-white peer-checked:border-primary transition text-sm">අනුයුක්තිය (Assignment)</div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="task-type" value="Lab" class="peer sr-only">
+                            <div class="text-center p-2 rounded-xl border border-gray-200 peer-checked:bg-secondary peer-checked:text-white peer-checked:border-secondary transition text-sm">රසායනාගාර (Lab)</div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="task-type" value="Lecture" class="peer sr-only">
+                            <div class="text-center p-2 rounded-xl border border-gray-200 peer-checked:bg-accent peer-checked:text-white peer-checked:border-accent transition text-sm">දේශන (Lecture)</div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="task-type" value="Event" class="peer sr-only">
+                            <div class="text-center p-2 rounded-xl border border-gray-200 peer-checked:bg-purple-500 peer-checked:text-white peer-checked:border-purple-500 transition text-sm">සිදුවීම් (Event)</div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="task-type" value="Vacation" class="peer sr-only">
+                            <div class="text-center p-2 rounded-xl border border-gray-200 peer-checked:bg-pink-500 peer-checked:text-white peer-checked:border-pink-500 transition text-sm">නිවාඩු (Vacation)</div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="task-type" value="Other" class="peer sr-only">
+                            <div class="text-center p-2 rounded-xl border border-gray-200 peer-checked:bg-gray-600 peer-checked:text-white peer-checked:border-gray-600 transition text-sm">වෙනත් (Other)</div>
+                        </label>
+                    </div>
+                </div>
 
-        <!-- View: Settings -->
-        <section id="view-settings" class="page-hidden p-4 space-y-6">
-            <h2 class="text-2xl font-bold mb-4">Settings</h2>
-            
-            <div class="bg-surface dark:bg-darkSurface rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
-                <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
-                    <div class="flex items-center gap-3">
-                        <i class="ph ph-bell-ringing text-xl text-primary"></i>
-                        <span class="font-medium">Enable Notifications</span>
+                <div>
+                    <label class="block text-sm font-medium text-textMain mb-1">දිනය සහ වේලාව *</label>
+                    <div class="relative">
+                        <input type="datetime-local" id="task-datetime" required class="w-full p-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary bg-gray-50 relative z-10 bg-transparent">
+                        <div class="absolute right-3 top-3 z-0 text-textMuted pointer-events-none">
+                            <i class="fa-regular fa-calendar"></i>
+                        </div>
                     </div>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" id="pushToggle" class="sr-only peer">
-                      <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
-                    </label>
                 </div>
-                
-                <div class="p-4 flex justify-between items-center" onclick="clearAllData()" style="cursor: pointer;">
-                    <div class="flex items-center gap-3 text-danger">
-                        <i class="ph ph-trash text-xl"></i>
-                        <span class="font-medium">Clear All Data</span>
+
+                <div>
+                    <label class="block text-sm font-medium text-textMain mb-1">ස්ථානය (විකල්ප)</label>
+                    <input type="text" id="task-location" placeholder="උදා: ශාලාව B, පුස්තකාලය" class="w-full p-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary bg-gray-50">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-textMain mb-2">දැනුම්දීම් මතක් කිරීම් (Reminders)</label>
+                    <div class="space-y-2 bg-gray-50 p-3 rounded-xl border border-gray-200">
+                        <label class="flex items-center gap-3">
+                            <input type="checkbox" value="5" class="w-5 h-5 text-primary rounded focus:ring-primary reminder-checkbox">
+                            <span class="text-sm">විනාඩි 5කට පෙර</span>
+                        </label>
+                        <label class="flex items-center gap-3">
+                            <input type="checkbox" value="60" class="w-5 h-5 text-primary rounded focus:ring-primary reminder-checkbox">
+                            <span class="text-sm">පැය 1කට පෙර</span>
+                        </label>
+                        <label class="flex items-center gap-3">
+                            <input type="checkbox" value="300" class="w-5 h-5 text-primary rounded focus:ring-primary reminder-checkbox">
+                            <span class="text-sm">පැය 5කට පෙර</span>
+                        </label>
+                        <label class="flex items-center gap-3">
+                            <input type="checkbox" value="1440" class="w-5 h-5 text-primary rounded focus:ring-primary reminder-checkbox">
+                            <span class="text-sm">දින 1කට පෙර</span>
+                        </label>
                     </div>
-                    <i class="ph ph-caret-right text-gray-400"></i>
+                    <p class="text-xs text-textMuted mt-1"><i class="fa-solid fa-info-circle"></i> මතක් කිරීම් ක්‍රියාත්මක වීමට පද්ධතියේ දැනුම්දීම් වලට id දීමට ඉඩ දෙන්න.</p>
                 </div>
-            </div>
-            
-            <p class="text-xs text-center text-gray-500">UniSync v1.0.0 &bull; Local Storage Mode</p>
-        </section>
+
+                <div class="pt-4 flex gap-3">
+                    <button type="button" onclick="navigate('home')" class="flex-1 p-3 rounded-xl border border-gray-300 text-textMain font-medium hover:bg-gray-50 transition">අවලංගු කරන්න</button>
+                    <button type="submit" class="flex-1 p-3 rounded-xl bg-primary text-white font-medium hover:bg-indigo-700 transition shadow-md">සුරකින්න</button>
+                </div>
+            </form>
+        </div>
+
+        <div id="settings-page" class="page">
+             <h2 class="text-xl font-bold text-textMain mb-4">සැකසුම්</h2>
+             <div class="bg-surface p-5 rounded-2xl shadow-sm border border-gray-100">
+                 <p class="text-textMuted mb-4">මෙම යෙදුම ඔබගේ දත්ත ඔබගේ උපාංගයේ පමණක් සුරකියි (Local Storage). අන්තර්ජාල සම්බන්ධතාවයක් නොමැතිව වුවද ක්‍රියා කරයි.</p>
+                 
+                 <div class="border-t border-gray-100 pt-4 mt-4">
+                     <h3 class="font-medium text-textMain mb-2">දැනුම්දීම් තත්ත්වය:</h3>
+                     <p id="notification-status" class="text-sm font-medium text-accent">පරීක්ෂා කරමින්...</p>
+                     <button onclick="requestNotificationPermission()" class="mt-3 w-full p-2 bg-gray-100 text-textMain rounded-lg text-sm hover:bg-gray-200 transition">
+                         අවසර ඉල්ලන්න
+                     </button>
+                 </div>
+                 
+                 <div class="border-t border-gray-100 pt-4 mt-4 text-center">
+                    <button onclick="clearAllData()" class="text-danger text-sm font-medium p-2 hover:bg-red-50 rounded-lg w-full transition">
+                        <i class="fa-solid fa-trash mr-1"></i> සියලු දත්ත මකන්න
+                    </button>
+                 </div>
+             </div>
+        </div>
 
     </main>
 
-    <!-- Floating Action Button (+) -->
-    <button id="fabAdd" class="fixed bottom-20 right-4 w-14 h-14 bg-primary text-white rounded-full shadow-lg shadow-primary/30 flex items-center justify-center text-2xl hover:bg-indigo-700 hover:scale-105 active:scale-95 transition-all z-20">
-        <i class="ph ph-plus"></i>
-    </button>
-
-    <!-- Bottom Navigation -->
-    <nav class="bg-surface dark:bg-darkSurface border-t border-gray-200 dark:border-gray-800 fixed bottom-0 w-full z-10 pb-safe">
-        <div class="flex justify-around items-center h-16 px-2">
-            <button class="nav-btn active flex flex-col items-center justify-center w-full h-full text-primary transition-colors" data-target="view-home">
-                <i class="ph-fill ph-house text-2xl mb-1"></i>
-                <span class="text-[10px] font-medium">Home</span>
-            </button>
-            <button class="nav-btn flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors" data-target="view-calendar">
-                <i class="ph ph-calendar text-2xl mb-1"></i>
-                <span class="text-[10px] font-medium">Calendar</span>
-            </button>
-            <button class="nav-btn flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors" data-target="view-settings">
-                <i class="ph ph-gear text-2xl mb-1"></i>
-                <span class="text-[10px] font-medium">Settings</span>
+    <nav class="fixed bottom-0 w-full bg-surface border-t border-gray-200 flex justify-around p-2 pb-safe shadow-[0_-2px_10px_rgba(0,0,0,0.05)] z-40">
+        <button onclick="navigate('home')" class="nav-btn p-3 flex flex-col items-center text-textMuted hover:text-primary transition w-1/3" data-target="home">
+            <i class="fa-solid fa-house text-xl mb-1"></i>
+            <span class="text-[10px] font-medium">මුල් පිටුව</span>
+        </button>
+        
+        <div class="relative w-1/3 flex justify-center">
+            <button onclick="openAddForm()" class="absolute -top-6 bg-primary text-white w-14 h-14 rounded-full flex justify-center items-center shadow-lg hover:bg-indigo-700 hover:scale-105 transition transform border-4 border-background">
+                <i class="fa-solid fa-plus text-2xl"></i>
             </button>
         </div>
+
+        <button onclick="navigate('settings')" class="nav-btn p-3 flex flex-col items-center text-textMuted hover:text-primary transition w-1/3" data-target="settings">
+            <i class="fa-solid fa-gear text-xl mb-1"></i>
+            <span class="text-[10px] font-medium">සැකසුම්</span>
+        </button>
     </nav>
 
-    <!-- Add/Edit Modal Full Screen for Mobile -->
-    <div id="taskModal" class="fixed inset-0 z-50 hidden">
-        <!-- Backdrop -->
-        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity opacity-0" id="modalBackdrop"></div>
-        
-        <!-- Modal Content -->
-        <div class="absolute inset-x-0 bottom-0 top-10 bg-surface dark:bg-darkBg rounded-t-3xl shadow-2xl flex flex-col transform translate-y-full transition-transform duration-300" id="modalContent">
-            
-            <!-- Modal Header -->
-            <div class="flex justify-between items-center p-4 border-b border-gray-100 dark:border-gray-800">
-                <button id="closeModalBtn" class="p-2 text-gray-500 hover:text-gray-800 dark:hover:text-white rounded-full">
-                    <i class="ph ph-x text-xl"></i>
-                </button>
-                <h3 class="text-lg font-bold" id="modalTitle">Add New Entry</h3>
-                <button id="saveTaskBtn" class="px-4 py-1.5 bg-primary text-white text-sm font-medium rounded-full shadow-sm">
-                    Save
-                </button>
-            </div>
-
-            <!-- Modal Body (Scrollable Form) -->
-            <div class="p-5 overflow-y-auto flex-1 space-y-5">
-                <input type="hidden" id="taskId">
-                
-                <!-- Category Selector -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Category</label>
-                    <div class="grid grid-cols-3 gap-2">
-                        <label class="cursor-pointer">
-                            <input type="radio" name="category" value="academic" class="peer sr-only" checked>
-                            <div class="p-3 text-center rounded-xl border border-gray-200 dark:border-gray-700 peer-checked:bg-primary/10 peer-checked:border-primary peer-checked:text-primary transition-all">
-                                <i class="ph ph-book-open text-xl mb-1 block"></i>
-                                <span class="text-xs font-medium">Academic</span>
-                            </div>
-                        </label>
-                        <label class="cursor-pointer">
-                            <input type="radio" name="category" value="notice" class="peer sr-only">
-                            <div class="p-3 text-center rounded-xl border border-gray-200 dark:border-gray-700 peer-checked:bg-warning/10 peer-checked:border-warning peer-checked:text-warning transition-all">
-                                <i class="ph ph-warning-circle text-xl mb-1 block"></i>
-                                <span class="text-xs font-medium">Notice</span>
-                            </div>
-                        </label>
-                        <label class="cursor-pointer">
-                            <input type="radio" name="category" value="personal" class="peer sr-only">
-                            <div class="p-3 text-center rounded-xl border border-gray-200 dark:border-gray-700 peer-checked:bg-secondary/10 peer-checked:border-secondary peer-checked:text-secondary transition-all">
-                                <i class="ph ph-user text-xl mb-1 block"></i>
-                                <span class="text-xs font-medium">Personal</span>
-                            </div>
-                        </label>
-                    </div>
-                </div>
-
-                <!-- Title Input -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" for="taskTitle">Title</label>
-                    <input type="text" id="taskTitle" placeholder="e.g., Data Structures Assignment" class="w-full p-3 bg-gray-50 dark:bg-darkSurface border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all placeholder:text-gray-400">
-                </div>
-
-                <!-- Native Date/Time Picker -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" for="taskDateTime">Date & Time</label>
-                    <input type="datetime-local" id="taskDateTime" class="w-full p-3 bg-gray-50 dark:bg-darkSurface border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all text-gray-800 dark:text-gray-100 block">
-                </div>
-                
-                <!-- Notification Reminder Selection -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Remind Me (Select Multiple)</label>
-                    <div class="space-y-2 mb-3">
-                        <label class="flex items-center gap-2 cursor-pointer">
-                            <input type="checkbox" name="presetReminder" value="0" class="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary">
-                            <span class="text-sm">At time of event</span>
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer">
-                            <input type="checkbox" name="presetReminder" value="15" class="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary">
-                            <span class="text-sm">15 minutes before</span>
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer">
-                            <input type="checkbox" name="presetReminder" value="120" class="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary">
-                            <span class="text-sm">2 hours before</span>
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer">
-                            <input type="checkbox" name="presetReminder" value="360" class="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary">
-                            <span class="text-sm">6 hours before</span>
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer">
-                            <input type="checkbox" name="presetReminder" value="1440" class="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary">
-                            <span class="text-sm">1 day before</span>
-                        </label>
-                    </div>
-                    
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 mt-4 border-t pt-4 border-gray-200 dark:border-gray-700">Custom Reminder</label>
-                    <div class="grid grid-cols-3 gap-2">
-                        <div>
-                            <span class="text-xs text-gray-500 mb-1 block">Days</span>
-                            <input type="number" id="customRemDays" min="0" placeholder="0" class="w-full p-2 bg-gray-50 dark:bg-darkSurface border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-sm">
-                        </div>
-                        <div>
-                            <span class="text-xs text-gray-500 mb-1 block">Hours</span>
-                            <input type="number" id="customRemHours" min="0" placeholder="0" class="w-full p-2 bg-gray-50 dark:bg-darkSurface border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-sm">
-                        </div>
-                        <div>
-                            <span class="text-xs text-gray-500 mb-1 block">Mins</span>
-                            <input type="number" id="customRemMins" min="0" placeholder="0" class="w-full p-2 bg-gray-50 dark:bg-darkSurface border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-sm">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Location / Notes Input -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" for="taskNotes">Location / Notes (Optional)</label>
-                    <textarea id="taskNotes" rows="3" placeholder="Lecture hall, items to bring, etc." class="w-full p-3 bg-gray-50 dark:bg-darkSurface border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all resize-none"></textarea>
-                </div>
-                
-                <!-- Delete Button (Only shows when editing) -->
-                <button id="deleteTaskBtn" class="w-full py-3 mt-4 text-danger font-medium border border-danger/30 rounded-xl hover:bg-danger/10 transition-colors hidden">
-                    Delete Entry
-                </button>
-                <div class="pb-10"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Toast Notification (In-App) -->
-    <div id="toast" class="fixed top-20 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-full shadow-lg text-sm font-medium transition-all duration-300 opacity-0 translate-y-[-20px] pointer-events-none z-50">
-        Message
-    </div>
+    <div id="toast-container" class="fixed bottom-24 left-1/2 transform -translate-x-1/2 z-50 flex flex-col gap-2 w-max max-w-[90%]"></div>
 
     <script>
-        /**
-         * State Management
-         */
-        let tasks = JSON.parse(localStorage.getItem('unisync_tasks')) || [];
-        let currentFilter = 'all';
-        let isDarkMode = localStorage.getItem('theme') === 'dark';
+        // --- State Management ---
+        let tasks = JSON.parse(localStorage.getItem('taskMasterTasks')) || [];
+        let currentEditingId = null;
+        let swRegistration = null;
 
-        /**
-         * DOM Elements
-         */
-        const els = {
-            mainContainer: document.getElementById('mainContainer'),
-            taskList: document.getElementById('taskList'),
-            emptyState: document.getElementById('emptyState'),
-            navBtns: document.querySelectorAll('.nav-btn'),
-            filterBtns: document.querySelectorAll('.filter-btn'),
-            fabAdd: document.getElementById('fabAdd'),
-            themeToggle: document.getElementById('themeToggle'),
-            themeIcon: document.getElementById('themeIcon'),
-            greetingText: document.getElementById('greetingText'),
-            pendingCount: document.getElementById('pendingCount'),
-            toast: document.getElementById('toast'),
-            
-            // Modal Elements
-            modal: document.getElementById('taskModal'),
-            modalBackdrop: document.getElementById('modalBackdrop'),
-            modalContent: document.getElementById('modalContent'),
-            closeModalBtn: document.getElementById('closeModalBtn'),
-            saveTaskBtn: document.getElementById('saveTaskBtn'),
-            deleteTaskBtn: document.getElementById('deleteTaskBtn'),
-            modalTitle: document.getElementById('modalTitle'),
-            
-            // Form Inputs
-            form: {
-                id: document.getElementById('taskId'),
-                title: document.getElementById('taskTitle'),
-                datetime: document.getElementById('taskDateTime'),
-                notes: document.getElementById('taskNotes'),
-                presetReminders: () => document.querySelectorAll('input[name="presetReminder"]:checked'),
-                allPresetCheckboxes: () => document.querySelectorAll('input[name="presetReminder"]'),
-                customRemDays: document.getElementById('customRemDays'),
-                customRemHours: document.getElementById('customRemHours'),
-                customRemMins: document.getElementById('customRemMins'),
-                category: () => document.querySelector('input[name="category"]:checked').value
-            },
-            
-            // Settings
-            pushToggle: document.getElementById('pushToggle')
+        // Colors mapping for UI
+        const typeColors = {
+            'Assignment': { bg: 'bg-indigo-100', text: 'text-primary', border: 'border-indigo-200', icon: 'fa-book' },
+            'Lab': { bg: 'bg-emerald-100', text: 'text-secondary', border: 'border-emerald-200', icon: 'fa-flask' },
+            'Lecture': { bg: 'bg-amber-100', text: 'text-accent', border: 'border-amber-200', icon: 'fa-chalkboard-user' },
+            'Event': { bg: 'bg-purple-100', text: 'text-purple-600', border: 'border-purple-200', icon: 'fa-calendar-day' },
+            'Vacation': { bg: 'bg-pink-100', text: 'text-pink-600', border: 'border-pink-200', icon: 'fa-umbrella-beach' },
+            'Other': { bg: 'bg-gray-100', text: 'text-gray-600', border: 'border-gray-200', icon: 'fa-thumbtack' }
         };
 
-        /**
-         * Utility: Format Date nicely
-         */
-        function formatDateTime(isoString) {
-            if (!isoString) return '';
-            const date = new Date(isoString);
-            return date.toLocaleString('en-US', { 
-                weekday: 'short', 
-                month: 'short', 
-                day: 'numeric', 
-                hour: 'numeric', 
-                minute: '2-digit',
-                hour12: true
-            });
-        }
-        
-        /**
-         * Utility: Toast Message
-         */
-        let toastTimeout;
-        function showToast(message) {
-            els.toast.textContent = message;
-            els.toast.classList.remove('opacity-0', 'translate-y-[-20px]');
-            els.toast.classList.add('opacity-100', 'translate-y-0');
-            
-            clearTimeout(toastTimeout);
-            toastTimeout = setTimeout(() => {
-                els.toast.classList.remove('opacity-100', 'translate-y-0');
-                els.toast.classList.add('opacity-0', 'translate-y-[-20px]');
-            }, 3000);
-        }
+        const sinhalaTypes = {
+            'Assignment': 'අනුයුක්තිය', 'Lab': 'රසායනාගාර', 'Lecture': 'දේශනය', 
+            'Event': 'සිදුවීම', 'Vacation': 'නිවාඩු', 'Other': 'වෙනත්'
+        };
 
-        /**
-         * Initialization
-         */
-        function init() {
-            setTheme(isDarkMode);
-            updateGreeting();
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            updateDateDisplay();
             renderTasks();
-            setupEventListeners();
+            setupSearch();
             checkNotificationStatus();
-            
-            // Setup Service Worker for Notifications
             registerServiceWorker();
-        }
-
-        function setTheme(dark) {
-            isDarkMode = dark;
-            if (dark) {
-                document.documentElement.classList.add('dark');
-                els.themeIcon.classList.replace('ph-moon', 'ph-sun');
-            } else {
-                document.documentElement.classList.remove('dark');
-                els.themeIcon.classList.replace('ph-sun', 'ph-moon');
-            }
-            localStorage.setItem('theme', dark ? 'dark' : 'light');
-        }
-
-        function updateGreeting() {
-            const hour = new Date().getHours();
-            let greeting = 'Good Evening,';
-            if (hour < 12) greeting = 'Good Morning,';
-            else if (hour < 18) greeting = 'Good Afternoon,';
-            els.greetingText.textContent = greeting;
-        }
-
-        function switchTab(targetId) {
-            document.querySelectorAll('main > section').forEach(section => {
-                if (section.id === targetId) {
-                    section.classList.remove('page-hidden');
-                    section.classList.add('page-active');
-                } else {
-                    section.classList.remove('page-active');
-                    section.classList.add('page-hidden');
-                }
-            });
             
-            // Update nav styles
-            els.navBtns.forEach(btn => {
-                const icon = btn.querySelector('i');
-                if (btn.dataset.target === targetId) {
+            // Set nav active state
+            updateNavUI('home');
+
+            // Handle Form Submission
+            document.getElementById('task-form').addEventListener('submit', handleFormSubmit);
+        });
+
+        // --- Navigation ---
+        function navigate(pageId) {
+            document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+            document.getElementById(`${pageId}-page`).classList.add('active');
+            updateNavUI(pageId);
+            
+            if(pageId === 'home') {
+                renderTasks(); // Refresh list on home
+            }
+        }
+
+        function updateNavUI(activeTarget) {
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                if(btn.dataset.target === activeTarget) {
                     btn.classList.add('text-primary');
-                    btn.classList.remove('text-gray-400', 'hover:text-gray-600', 'dark:hover:text-gray-300');
-                    icon.classList.add('ph-fill');
-                    icon.classList.remove('ph');
+                    btn.classList.remove('text-textMuted');
                 } else {
                     btn.classList.remove('text-primary');
-                    btn.classList.add('text-gray-400', 'hover:text-gray-600', 'dark:hover:text-gray-300');
-                    icon.classList.remove('ph-fill');
-                    icon.classList.add('ph');
+                    btn.classList.add('text-textMuted');
                 }
             });
-
-            // Toggle FAB visibility
-            if (targetId === 'view-home') {
-                els.fabAdd.style.display = 'flex';
-            } else {
-                els.fabAdd.style.display = 'none';
-            }
         }
 
-        /**
-         * Task Management
-         */
-        function getCategoryStyle(type) {
-            switch(type) {
-                case 'academic': return { color: 'text-primary', bg: 'bg-primary/10', icon: 'ph-book-open', border: 'border-primary/20' };
-                case 'notice': return { color: 'text-warning', bg: 'bg-warning/10', icon: 'ph-warning-circle', border: 'border-warning/20' };
-                case 'personal': return { color: 'text-secondary', bg: 'bg-secondary/10', icon: 'ph-user', border: 'border-secondary/20' };
-                default: return { color: 'text-gray-500', bg: 'bg-gray-100', icon: 'ph-circle', border: 'border-gray-200' };
-            }
+        // --- Core Functions ---
+        function updateDateDisplay() {
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const today = new Date().toLocaleDateString('si-LK', options);
+            document.getElementById('current-date-display').textContent = today;
         }
 
-        function renderTasks() {
-            els.taskList.innerHTML = '';
-            let filteredTasks = tasks;
+        function openAddForm() {
+            currentEditingId = null;
+            document.getElementById('form-title').textContent = 'නව කාර්යයක් එක් කරන්න';
+            document.getElementById('task-form').reset();
             
-            if (currentFilter !== 'all') {
-                filteredTasks = tasks.filter(t => t.category === currentFilter);
-            }
+            // Set default datetime to now + 1 hour
+            const now = new Date();
+            now.setHours(now.getHours() + 1);
+            const tzoffset = (new Date()).getTimezoneOffset() * 60000;
+            const localISOTime = (new Date(now - tzoffset)).toISOString().slice(0, 16);
+            document.getElementById('task-datetime').value = localISOTime;
             
-            // Sort by date closest first
-            filteredTasks.sort((a, b) => new Date(a.datetime) - new Date(b.datetime));
-
-            els.pendingCount.textContent = tasks.length; // Total pending
-
-            if (filteredTasks.length === 0) {
-                els.emptyState.style.display = 'block';
-            } else {
-                els.emptyState.style.display = 'none';
-                
-                filteredTasks.forEach(task => {
-                    const style = getCategoryStyle(task.category);
-                    const taskEl = document.createElement('div');
-                    taskEl.className = `bg-surface dark:bg-darkSurface p-4 rounded-2xl shadow-sm border ${style.border} dark:border-gray-800 flex gap-4 items-start cursor-pointer hover:shadow-md transition-shadow active:scale-[0.98]`;
-                    taskEl.onclick = () => openModal(task.id);
-                    
-                    const timeObj = new Date(task.datetime);
-                    const isPast = timeObj < new Date();
-                    
-                    taskEl.innerHTML = `
-                        <div class="w-12 h-12 rounded-xl flex-shrink-0 flex items-center justify-center ${style.bg} ${style.color}">
-                            <i class="ph ${style.icon} text-2xl"></i>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <h4 class="font-semibold text-base truncate ${isPast ? 'text-gray-500' : 'text-gray-800 dark:text-gray-100'}">${task.title}</h4>
-                            <p class="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1 mt-1">
-                                <i class="ph ph-clock"></i> ${formatDateTime(task.datetime)}
-                            </p>
-                            ${task.notes ? `<p class="text-xs text-gray-400 mt-2 truncate"><i class="ph ph-text-align-left mr-1"></i>${task.notes}</p>` : ''}
-                        </div>
-                        <div class="pt-1">
-                            <i class="ph ph-caret-right text-gray-300 dark:text-gray-600"></i>
-                        </div>
-                    `;
-                    els.taskList.appendChild(taskEl);
-                });
-            }
+            navigate('form');
         }
 
-        function saveTask() {
-            const id = els.form.id.value;
-            const title = els.form.title.value.trim();
-            const datetime = els.form.datetime.value;
-            const notes = els.form.notes.value.trim();
-            const category = els.form.category();
+        function handleFormSubmit(e) {
+            e.preventDefault();
             
-            const selectedPresets = Array.from(els.form.presetReminders()).map(cb => parseInt(cb.value));
-            const customD = parseInt(els.form.customRemDays.value) || 0;
-            const customH = parseInt(els.form.customRemHours.value) || 0;
-            const customM = parseInt(els.form.customRemMins.value) || 0;
+            const title = document.getElementById('task-title').value.trim();
+            const type = document.querySelector('input[name="task-type"]:checked').value;
+            const datetimeStr = document.getElementById('task-datetime').value;
+            const location = document.getElementById('task-location').value.trim();
+            
+            const reminders = Array.from(document.querySelectorAll('.reminder-checkbox:checked'))
+                                 .map(cb => parseInt(cb.value));
 
-            if (!title || !datetime) {
-                showToast("Title and Date are required!");
+            if (!title || !datetimeStr) {
+                showToast('කරුණාකර අනිවාර්ය තොරතුරු පුරවන්න.', 'error');
                 return;
             }
 
+            const timestamp = new Date(datetimeStr).getTime();
+            
             const taskData = {
-                id: id ? id : Date.now().toString(),
+                id: currentEditingId || Date.now().toString(),
                 title,
-                datetime,
-                notes,
-                category,
-                reminders: selectedPresets,
-                customReminder: { days: customD, hours: customH, mins: customM }
+                type,
+                timestamp,
+                location,
+                reminders,
+                completed: false
             };
 
-            if (id) {
-                const index = tasks.findIndex(t => t.id === id);
-                if (index !== -1) tasks[index] = taskData;
-                showToast("Entry updated");
+            if (currentEditingId) {
+                const index = tasks.findIndex(t => t.id === currentEditingId);
+                if (index !== -1) {
+                    taskData.completed = tasks[index].completed; 
+                    tasks[index] = taskData;
+                }
             } else {
                 tasks.push(taskData);
-                showToast("Entry added");
             }
 
-            localStorage.setItem('unisync_tasks', JSON.stringify(tasks));
+            saveTasks();
+            scheduleNotifications(taskData);
             
-            // Schedule Notification via Service Worker strategy
-            scheduleNotification(taskData);
-            
-            renderTasks();
-            closeModal();
+            showToast(currentEditingId ? 'කාර්යය යාවත්කාලීන කරන ලදී!' : 'නව කාර්යය සුරකින ලදී!', 'success');
+            navigate('home');
         }
 
-        function deleteTask() {
-            const id = els.form.id.value;
-            if (id) {
-                // Remove visual confirmation for brevity, use custom modal if needed, but per rules no confirm()
-                tasks = tasks.filter(t => t.id !== id);
-                localStorage.setItem('unisync_tasks', JSON.stringify(tasks));
-                showToast("Entry deleted");
+        function saveTasks() {
+            tasks.sort((a, b) => a.timestamp - b.timestamp);
+            localStorage.setItem('taskMasterTasks', JSON.stringify(tasks));
+        }
+
+        function toggleComplete(id) {
+            const task = tasks.find(t => t.id === id);
+            if (task) {
+                task.completed = !task.completed;
+                saveTasks();
                 renderTasks();
-                closeModal();
+            }
+        }
+
+        function editTask(id) {
+            const task = tasks.find(t => t.id === id);
+            if (!task) return;
+
+            currentEditingId = id;
+            document.getElementById('form-title').textContent = 'කාර්යය සංස්කරණය කරන්න';
+            
+            document.getElementById('task-title').value = task.title;
+            document.querySelector(`input[name="task-type"][value="${task.type}"]`).checked = true;
+            
+            const tzoffset = (new Date()).getTimezoneOffset() * 60000;
+            const localISOTime = (new Date(task.timestamp - tzoffset)).toISOString().slice(0, 16);
+            document.getElementById('task-datetime').value = localISOTime;
+            
+            document.getElementById('task-location').value = task.location || '';
+
+            document.querySelectorAll('.reminder-checkbox').forEach(cb => cb.checked = false);
+            if (task.reminders) {
+                task.reminders.forEach(time => {
+                    const cb = document.querySelector(`.reminder-checkbox[value="${time}"]`);
+                    if(cb) cb.checked = true;
+                });
+            }
+
+            navigate('form');
+        }
+
+        function deleteTask(id) {
+            if (confirm('මෙම කාර්යය මැකීමට ඔබට විශ්වාසද?')) {
+                tasks = tasks.filter(t => t.id !== id);
+                saveTasks();
+                renderTasks();
+                showToast('කාර්යය මකා දමන ලදී', 'info');
             }
         }
 
         function clearAllData() {
-             tasks = [];
-             localStorage.removeItem('unisync_tasks');
-             showToast("All data cleared");
-             renderTasks();
-        }
-
-        /**
-         * Modal Logic
-         */
-        function openModal(taskId = null) {
-            els.modal.classList.remove('hidden');
-            
-            // Trigger animations
-            setTimeout(() => {
-                els.modalBackdrop.classList.remove('opacity-0');
-                els.modalContent.classList.remove('translate-y-full');
-                els.modalContent.classList.add('modal-active');
-            }, 10);
-
-            if (taskId) {
-                const task = tasks.find(t => t.id === taskId);
-                if (task) {
-                    els.modalTitle.textContent = "Edit Entry";
-                    els.form.id.value = task.id;
-                    els.form.title.value = task.title;
-                    els.form.datetime.value = task.datetime;
-                    els.form.notes.value = task.notes || '';
-                    document.querySelector(`input[name="category"][value="${task.category}"]`).checked = true;
-                    
-                    els.form.allPresetCheckboxes().forEach(cb => cb.checked = false);
-                    let rems = task.reminders || (task.reminderMinutes !== undefined ? [task.reminderMinutes] : []);
-                    rems.forEach(val => {
-                        const cb = document.querySelector(`input[name="presetReminder"][value="${val}"]`);
-                        if (cb) cb.checked = true;
-                    });
-                    
-                    els.form.customRemDays.value = task.customReminder ? task.customReminder.days || '' : '';
-                    els.form.customRemHours.value = task.customReminder ? task.customReminder.hours || '' : '';
-                    els.form.customRemMins.value = task.customReminder ? task.customReminder.mins || '' : '';
-
-                    els.deleteTaskBtn.classList.remove('hidden');
-                }
-            } else {
-                els.modalTitle.textContent = "Add New Entry";
-                els.form.id.value = '';
-                els.form.title.value = '';
-                // Set default time to now + 1 hour for convenience
-                const now = new Date();
-                now.setHours(now.getHours() + 1);
-                now.setMinutes(now.getMinutes() - now.getMinutes() % 5); // round to 5 mins
-                els.form.datetime.value = now.toISOString().slice(0, 16); 
-                els.form.notes.value = '';
-                document.querySelector(`input[name="category"][value="academic"]`).checked = true;
-                
-                els.form.allPresetCheckboxes().forEach(cb => cb.checked = false);
-                document.querySelector(`input[name="presetReminder"][value="15"]`).checked = true;
-                
-                els.form.customRemDays.value = '';
-                els.form.customRemHours.value = '';
-                els.form.customRemMins.value = '';
-
-                els.deleteTaskBtn.classList.add('hidden');
+            if(confirm('සියලුම දත්ත මැකීමට ඔබට විශ්වාසද? මෙම ක්‍රියාව ආපසු හැරවිය නොහැක.')) {
+                tasks = [];
+                localStorage.removeItem('taskMasterTasks');
+                renderTasks();
+                showToast('සියලු දත්ත මකා දමන ලදී', 'info');
+                navigate('home');
             }
         }
 
-        function closeModal() {
-            els.modalBackdrop.classList.add('opacity-0');
-            els.modalContent.classList.add('translate-y-full');
-            els.modalContent.classList.remove('modal-active');
+        function renderTasks(filterText = '') {
+            const listEl = document.getElementById('task-list');
+            const emptyState = document.getElementById('empty-state');
             
-            setTimeout(() => {
-                els.modal.classList.add('hidden');
-            }, 300); // match transition duration
-        }
-
-        /**
-         * Event Listeners setup
-         */
-        function setupEventListeners() {
-            // Theme toggle
-            els.themeToggle.addEventListener('click', () => setTheme(!isDarkMode));
-
-            // Navigation
-            els.navBtns.forEach(btn => {
-                btn.addEventListener('click', () => switchTab(btn.dataset.target));
-            });
-
-            // Filtering
-            els.filterBtns.forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    els.filterBtns.forEach(b => {
-                        b.classList.remove('bg-primary', 'text-white');
-                        b.classList.add('bg-surface', 'dark:bg-darkSurface', 'text-gray-800', 'dark:text-gray-200');
-                    });
-                    
-                    const clicked = e.target;
-                    clicked.classList.remove('bg-surface', 'dark:bg-darkSurface', 'text-gray-800', 'dark:text-gray-200');
-                    clicked.classList.add('bg-primary', 'text-white');
-                    
-                    currentFilter = clicked.dataset.filter;
-                    renderTasks();
-                });
-            });
-
-            // Modal
-            els.fabAdd.addEventListener('click', () => openModal());
-            els.closeModalBtn.addEventListener('click', closeModal);
-            els.modalBackdrop.addEventListener('click', closeModal);
-            els.saveTaskBtn.addEventListener('click', saveTask);
-            els.deleteTaskBtn.addEventListener('click', deleteTask);
+            listEl.innerHTML = '';
             
-            // Settings Notification Toggle
-            els.pushToggle.addEventListener('change', (e) => {
-                if(e.target.checked) {
-                    requestNotificationPermission();
-                }
+            const now = Date.now();
+            const oneDay = 24 * 60 * 60 * 1000;
+            
+            const filteredTasks = tasks.filter(task => {
+                const matchesSearch = task.title.toLowerCase().includes(filterText.toLowerCase()) || 
+                                     (task.location && task.location.toLowerCase().includes(filterText.toLowerCase()));
+                const isTooOld = task.timestamp < (now - oneDay);
+                return matchesSearch && (!isTooOld || filterText !== '');
             });
-        }
 
-        /**
-         * Notification & Service Worker Logic
-         */
-         
-        // REQUIREMENT: Notification Language in Sinhala
-        const sinhalaTranslations = {
-            'academic': 'අධ්‍යයන වැඩකටයුත්තක්', // Academic task
-            'notice': 'විශේෂ නිවේදනයක්',       // Special notice
-            'personal': 'පුද්ගලික සිදුවීමක්',    // Personal event
-            'due_in': 'ඉක්මනින් පැමිණේ',        // Coming up / Due in
-            'happening_now': 'දැන් ආරම්භ වේ'     // Happening now
-        };
-
-        function checkNotificationStatus() {
-            if (!("Notification" in window)) {
-                console.log("This browser does not support desktop notification");
-                els.pushToggle.disabled = true;
+            if (filteredTasks.length === 0) {
+                emptyState.style.display = 'block';
+                listEl.appendChild(emptyState);
                 return;
             }
-            if (Notification.permission === "granted") {
-                els.pushToggle.checked = true;
+
+            emptyState.style.display = 'none';
+
+            const todayStart = new Date().setHours(0,0,0,0);
+            const tomorrowStart = todayStart + (24 * 60 * 60 * 1000);
+
+            filteredTasks.forEach(task => {
+                const taskDate = new Date(task.timestamp);
+                const taskStart = new Date(taskDate).setHours(0,0,0,0);
+                
+                let timeCategoryText = '';
+                if (taskStart < todayStart) timeCategoryText = 'පසුගිය'; 
+                else if (taskStart === todayStart) timeCategoryText = 'අද (Today)';
+                else if (taskStart === tomorrowStart) timeCategoryText = 'හෙට (Tomorrow)';
+                else timeCategoryText = taskDate.toLocaleDateString('si-LK', {month: 'short', day: 'numeric'});
+
+                const style = typeColors[task.type] || typeColors['Other'];
+                const timeString = taskDate.toLocaleTimeString('si-LK', {hour: '2-digit', minute:'2-digit'});
+                
+                const isOverdue = task.timestamp < now && !task.completed;
+
+                const taskCard = document.createElement('div');
+                taskCard.className = `bg-surface p-4 rounded-2xl shadow-sm border ${task.completed ? 'border-gray-200 opacity-60' : (isOverdue ? 'border-red-300' : style.border)} relative overflow-hidden transition-all`;
+                
+                const leftAccent = document.createElement('div');
+                leftAccent.className = `absolute left-0 top-0 bottom-0 w-1.5 ${task.completed ? 'bg-gray-300' : (isOverdue ? 'bg-red-400' : style.text.replace('text-', 'bg-'))}`;
+                taskCard.appendChild(leftAccent);
+
+                taskCard.innerHTML += `
+                    <div class="flex gap-3 items-start pl-2">
+                        <button onclick="toggleComplete('${task.id}')" class="mt-1 flex-shrink-0 w-6 h-6 rounded-full border-2 ${task.completed ? 'bg-secondary border-secondary text-white' : 'border-gray-300 text-transparent'} flex items-center justify-center transition">
+                            <i class="fa-solid fa-check text-xs"></i>
+                        </button>
+                        
+                        <div class="flex-grow min-w-0 cursor-pointer" onclick="editTask('${task.id}')">
+                            <div class="flex justify-between items-start mb-1">
+                                <span class="text-xs font-semibold px-2 py-0.5 rounded-full ${style.bg} ${style.text}">
+                                    <i class="fa-solid ${style.icon} mr-1"></i>${sinhalaTypes[task.type] || task.type}
+                                </span>
+                                <span class="text-xs font-medium ${isOverdue ? 'text-red-500' : 'text-primary'}">${timeCategoryText}</span>
+                            </div>
+                            
+                            <h3 class="font-bold text-textMain truncate ${task.completed ? 'line-through text-gray-500' : ''}">${task.title}</h3>
+                            
+                            <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 mt-2 text-sm text-textMuted">
+                                <div class="flex items-center gap-1">
+                                    <i class="fa-regular fa-clock"></i>
+                                    <span class="${isOverdue ? 'text-red-500 font-medium' : ''}">${timeString}</span>
+                                </div>
+                                ${task.location ? `
+                                <div class="flex items-center gap-1 truncate">
+                                    <i class="fa-solid fa-location-dot"></i>
+                                    <span class="truncate">${task.location}</span>
+                                </div>` : ''}
+                            </div>
+                        </div>
+                        
+                        <div class="flex flex-col gap-2">
+                            <button onclick="deleteTask('${task.id}')" class="text-gray-300 hover:text-danger transition p-1">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                listEl.appendChild(taskCard);
+            });
+        }
+
+        function setupSearch() {
+            const searchInput = document.getElementById('search-input');
+            searchInput.addEventListener('input', (e) => {
+                renderTasks(e.target.value);
+            });
+        }
+
+        // --- Notifications & Service Worker ---
+        
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const bg = type === 'success' ? 'bg-secondary' : (type === 'error' ? 'bg-danger' : 'bg-gray-800');
+            
+            toast.className = `${bg} text-white px-4 py-2 rounded-full shadow-lg text-sm font-medium animate-[fadeIn_0.3s_ease-out] flex items-center gap-2`;
+            toast.innerHTML = `
+                <i class="fa-solid ${type === 'success' ? 'fa-circle-check' : (type==='error' ? 'fa-circle-exclamation' : 'fa-circle-info')}"></i>
+                ${message}
+            `;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(10px)';
+                toast.style.transition = 'all 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function checkNotificationStatus() {
+            const statusEl = document.getElementById('notification-status');
+            const btn = document.getElementById('request-notification-btn');
+            
+            if (!('Notification' in window)) {
+                statusEl.textContent = 'ඔබේ බ්‍රව්සරය දැනුම්දීම් සඳහා සහය නොදක්වයි.';
+                statusEl.className = 'text-sm font-medium text-danger';
+                btn.style.display = 'none';
+                return;
+            }
+
+            if (Notification.permission === 'granted') {
+                statusEl.textContent = 'සක්‍රිය කර ඇත (Enabled)';
+                statusEl.className = 'text-sm font-medium text-secondary';
+                btn.style.display = 'none';
+            } else if (Notification.permission === 'denied') {
+                statusEl.textContent = 'අක්‍රිය කර ඇත (Denied). බ්‍රව්සර් සැකසුම් මගින් වෙනස් කරන්න.';
+                statusEl.className = 'text-sm font-medium text-danger';
+            } else {
+                statusEl.textContent = 'අවසර ලබා දී නොමැත (Not granted yet)';
+                statusEl.className = 'text-sm font-medium text-accent';
             }
         }
 
         async function requestNotificationPermission() {
-            if (!("Notification" in window)) return;
+            if (!('Notification' in window)) {
+                alert('This browser does not support desktop notification');
+                return;
+            }
             const permission = await Notification.requestPermission();
-            if (permission !== 'granted') {
-                els.pushToggle.checked = false;
-                showToast("Notification permission denied.");
-            } else {
-                showToast("Notifications enabled!");
-                // Register background sync if available
+            checkNotificationStatus();
+            if (permission === 'granted') {
+                showToast('දැනුම්දීම් සක්‍රිය කරන ලදී!', 'success');
+                registerServiceWorker(); 
             }
         }
 
-        // Simulating Service Worker scheduling logic directly here to ensure it runs in this single-file preview environment.
-        // In a real deployed app, this payload would be sent to a backend or a Service Worker sync event.
-        function scheduleNotification(task) {
-            if (Notification.permission !== "granted") return;
-            
-            const eventTime = new Date(task.datetime).getTime();
-            const now = new Date().getTime();
-            
-            let allReminderMinutes = [...(task.reminders || [])];
-            
-            if (task.customReminder) {
-                const customMins = (task.customReminder.days * 1440) + (task.customReminder.hours * 60) + task.customReminder.mins;
-                if (customMins > 0) {
-                    allReminderMinutes.push(customMins);
+        async function registerServiceWorker() {
+            if ('serviceWorker' in navigator) {
+                try {
+                    // කෙලින්ම repository එකේ තියෙන sw.js එක register කරනවා (Blob URL වෙනුවට)
+                    swRegistration = await navigator.serviceWorker.register('sw.js');
+                    console.log('ServiceWorker registration successful');
+                } catch (err) {
+                    console.log('ServiceWorker registration failed: ', err);
                 }
             }
+        }
+
+        function scheduleNotifications(task) {
+            if (!task.reminders || task.reminders.length === 0) return;
+            if (Notification.permission !== 'granted') return;
             
-            // Fallback for older tasks
-            if (allReminderMinutes.length === 0 && task.reminderMinutes !== undefined) {
-                allReminderMinutes.push(task.reminderMinutes);
-            }
+            const now = Date.now();
             
-            allReminderMinutes.forEach(reminderOffsetMins => {
-                const reminderOffset = reminderOffsetMins * 60000;
-                const triggerTime = eventTime - reminderOffset;
-                const timeUntilTrigger = triggerTime - now;
+            task.reminders.forEach(minutesBefore => {
+                const notifyTime = task.timestamp - (minutesBefore * 60 * 1000);
+                const delay = notifyTime - now;
+                
+                if (delay > 0 && swRegistration) {
+                    let timeText = '';
+                    if(minutesBefore < 60) timeText = `විනාඩි ${minutesBefore} කින්`;
+                    else if(minutesBefore === 60) timeText = 'පැය 1 කින්';
+                    else if(minutesBefore === 300) timeText = 'පැය 5 කින්';
+                    else timeText = `දින ${minutesBefore/1440} කින්`;
 
-                if (timeUntilTrigger > 0) {
-                    // Construct the Sinhala Message
-                    const catSinhala = sinhalaTranslations[task.category] || sinhalaTranslations['personal'];
-                    const statusSinhala = reminderOffsetMins === 0 ? sinhalaTranslations['happening_now'] : sinhalaTranslations['due_in'];
-                    
-                    // Constructing: "[Category]: [Title] [Status]"
-                    const pushTitle = "UniSync සිහිකැඳවීම"; // UniSync Reminder
-                    const pushBody = `${catSinhala} : ${task.title}\n${statusSinhala}!`;
+                    const sType = sinhalaTypes[task.type] || task.type;
+                    let bodyStr = `${sType}: ${timeText} ආරම්භ වේ.`;
+                    if(task.location) bodyStr += `\nස්ථානය: ${task.location}`;
 
-                    console.log(`Scheduled notification for "${task.title}" in ${Math.round(timeUntilTrigger/60000)} minutes. Body: ${pushBody}`);
-
-                    setTimeout(() => {
-                        fireNotification(pushTitle, pushBody, task.id + '-' + reminderOffsetMins);
-                    }, timeUntilTrigger);
+                    // Active හෝ Waiting සර්විස් වර්කර් එකට මෙසේජ් එක යවනවා
+                    const worker = swRegistration.active || swRegistration.waiting;
+                    if (worker) {
+                        worker.postMessage({
+                            type: 'SCHEDULE_NOTIFICATION',
+                            title: task.title,
+                            body: bodyStr,
+                            delay: delay,
+                            id: `task-${task.id}-${minutesBefore}`
+                        });
+                    }
                 }
             });
         }
-
-        function fireNotification(title, body, tag) {
-            if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-                // Ask SW to show it
-                navigator.serviceWorker.controller.postMessage({
-                    type: 'SHOW_NOTIFICATION',
-                    title: title,
-                    options: {
-                        body: body,
-                        icon: 'https://placehold.co/192x192/4f46e5/white?text=US',
-                        badge: 'https://placehold.co/96x96/ffffff/ffffff?text=U', // small mono icon
-                        vibrate: [200, 100, 200],
-                        tag: tag,
-                        requireInteraction: true
-                    }
-                });
-            } else if (Notification.permission === "granted") {
-                // Fallback if SW not active (or in our single-file preview environment)
-                new Notification(title, { body: body, icon: 'https://placehold.co/192x192/4f46e5/white?text=US', tag: tag });
-            }
+        
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.ready.then(() => {
+                 tasks.forEach(task => {
+                     if(!task.completed) scheduleNotifications(task);
+                 });
+            });
         }
-
-        // Service Worker Registration
-        // Note: Real background notifications (when app is closed) require a dedicated 'sw.js' file.
-        // For this single-file preview, browser security blocks Blob-based Service Workers.
-        function registerServiceWorker() {
-            if ('serviceWorker' in navigator) {
-                const swCode = `
-                    self.addEventListener('install', (event) => {
-                        self.skipWaiting();
-                    });
-                    self.addEventListener('activate', (event) => {
-                        event.waitUntil(self.clients.claim());
-                    });
-                    self.addEventListener('message', (event) => {
-                        if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
-                            const promiseChain = self.registration.showNotification(
-                                event.data.title, 
-                                event.data.options
-                            );
-                            event.waitUntil(promiseChain);
-                        }
-                    });
-                    self.addEventListener('notificationclick', (event) => {
-                        event.notification.close();
-                        // Open the app if clicked
-                        event.waitUntil(
-                            clients.matchAll({ type: 'window' }).then( windowClients => {
-                                for (var i = 0; i < windowClients.length; i++) {
-                                    var client = windowClients[i];
-                                    if (client.url === '/' && 'focus' in client) {
-                                        return client.focus();
-                                    }
-                                }
-                                if (clients.openWindow) {
-                                    return clients.openWindow('/');
-                                }
-                            })
-                        );
-                    });
-                `;
-                
-                console.info("To enable full background push notifications when the app is closed: \n1. Save the SW code found in index.html into a file named 'sw.js' in your project root.\n2. Uncomment the production registration code below.");
-                
-                // PRODUCTION CODE: Uncomment this when you have a real sw.js file on your server
-                /*
-                navigator.serviceWorker.register('./sw.js')
-                    .then(registration => {
-                        console.log('ServiceWorker registered with scope:', registration.scope);
-                    })
-                    .catch(error => {
-                        console.error('ServiceWorker registration failed:', error);
-                    });
-                */
-            }
-        }
-
-        // Run app
-        window.addEventListener('DOMContentLoaded', init);
-
     </script>
 </body>
 </html>
