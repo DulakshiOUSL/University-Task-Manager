@@ -132,10 +132,10 @@
 
             <!-- Quick Filters -->
             <div class="flex overflow-x-auto pb-2 gap-2 hide-scrollbar -mx-4 px-4">
-                <button class="filter-btn active px-4 py-2 rounded-full bg-primary text-white text-sm font-medium whitespace-nowrap transition-colors" data-filter="all">All</button>
-                <button class="filter-btn px-4 py-2 rounded-full bg-surface dark:bg-darkSurface border border-gray-200 dark:border-gray-700 text-sm font-medium whitespace-nowrap hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors" data-filter="academic">Academic</button>
-                <button class="filter-btn px-4 py-2 rounded-full bg-surface dark:bg-darkSurface border border-gray-200 dark:border-gray-700 text-sm font-medium whitespace-nowrap hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors" data-filter="notice">Notices</button>
-                <button class="filter-btn px-4 py-2 rounded-full bg-surface dark:bg-darkSurface border border-gray-200 dark:border-gray-700 text-sm font-medium whitespace-nowrap hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors" data-filter="personal">Personal</button>
+                <button class="filter-btn active px-4 py-2 rounded-full bg-blue-600 text-white border border-blue-600 text-sm font-medium whitespace-nowrap transition-colors" data-filter="all">All</button>
+                <button class="filter-btn px-4 py-2 rounded-full bg-surface dark:bg-darkSurface border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 text-sm font-medium whitespace-nowrap hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors" data-filter="academic">Academic</button>
+                <button class="filter-btn px-4 py-2 rounded-full bg-surface dark:bg-darkSurface border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 text-sm font-medium whitespace-nowrap hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors" data-filter="notice">Notices</button>
+                <button class="filter-btn px-4 py-2 rounded-full bg-surface dark:bg-darkSurface border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 text-sm font-medium whitespace-nowrap hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors" data-filter="personal">Personal</button>
             </div>
 
             <!-- Upcoming List -->
@@ -703,13 +703,13 @@
             els.filterBtns.forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     els.filterBtns.forEach(b => {
-                        b.classList.remove('bg-primary', 'text-white');
-                        b.classList.add('bg-surface', 'dark:bg-darkSurface', 'text-gray-800', 'dark:text-gray-200');
+                        b.classList.remove('bg-blue-600', 'text-white', 'border-blue-600');
+                        b.classList.add('bg-surface', 'dark:bg-darkSurface', 'text-gray-800', 'dark:text-gray-200', 'border-gray-200', 'dark:border-gray-700');
                     });
                     
                     const clicked = e.target;
-                    clicked.classList.remove('bg-surface', 'dark:bg-darkSurface', 'text-gray-800', 'dark:text-gray-200');
-                    clicked.classList.add('bg-primary', 'text-white');
+                    clicked.classList.remove('bg-surface', 'dark:bg-darkSurface', 'text-gray-800', 'dark:text-gray-200', 'border-gray-200', 'dark:border-gray-700');
+                    clicked.classList.add('bg-blue-600', 'text-white', 'border-blue-600');
                     
                     currentFilter = clicked.dataset.filter;
                     renderTasks();
@@ -756,21 +756,29 @@
             }
         }
 
-        // --- මෙන්න මේ function එක විතරක් සම්පූර්ණයෙන්ම වෙනස් කරන්න ---
+        let swRegistration = null;
+
         async function registerServiceWorker() {
             if ('serviceWorker' in navigator) {
                 try {
-                    swRegistration = await navigator.serviceWorker.register('sw.js');
-                    console.log('ServiceWorker registered with sw.js');
+                    if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
+                        swRegistration = await navigator.serviceWorker.register('./sw.js');
+                        console.log('ServiceWorker registered successfully');
+                        
+                        // App එක load වෙද්දිම දැනට තියෙන tasks වලට notifications ආයෙත් සෙට් කරන්න
+                        tasks.forEach(task => scheduleNotification(task));
+                    }
                 } catch (err) {
                     console.log('ServiceWorker registration failed: ', err);
                 }
             }
         }
 
-        function scheduleNotifications(task) {
+        function scheduleNotification(task) {
             if (!task.reminders || task.reminders.length === 0 || Notification.permission !== 'granted' || !swRegistration) return;
+            
             const now = Date.now();
+            const eventTime = new Date(task.datetime).getTime();
             
             let allReminderMinutes = [...(task.reminders || [])];
             
@@ -781,7 +789,6 @@
                 }
             }
             
-            // Fallback for older tasks without the array format
             if (allReminderMinutes.length === 0 && task.reminderMinutes !== undefined) {
                 allReminderMinutes.push(task.reminderMinutes);
             }
@@ -793,7 +800,6 @@
 
                 if (timeUntilTrigger > 0) {
                     
-                    // Natural Conversational Sinhala Translation Logic
                     const catLabels = {
                         'academic': 'අධ්‍යයන වැඩේට',
                         'notice': 'විශේෂ නිවේදනයට',
@@ -828,42 +834,19 @@
         }
 
         function fireNotification(title, body, tag) {
-            if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-                // Ask SW to show it
-                navigator.serviceWorker.controller.postMessage({
-                    type: 'SHOW_NOTIFICATION',
-                    title: title,
-                    options: {
-                        body: body,
-                        icon: 'https://placehold.co/192x192/4f46e5/white?text=US',
-                        badge: 'https://placehold.co/96x96/ffffff/ffffff?text=U', 
-                        vibrate: [200, 100, 200],
-                        tag: tag,
-                        requireInteraction: true
-                    }
+            if (swRegistration) {
+                // Service Worker හරහා Notification එක යැවීම
+                swRegistration.showNotification(title, {
+                    body: body,
+                    icon: 'https://placehold.co/192x192/4f46e5/white?text=US',
+                    badge: 'https://placehold.co/96x96/ffffff/ffffff?text=U', 
+                    vibrate: [200, 100, 200],
+                    tag: tag,
+                    requireInteraction: true
                 });
             } else if (Notification.permission === "granted") {
-                // Fallback if SW not active
+                // Fallback
                 new Notification(title, { body: body, icon: 'https://placehold.co/192x192/4f46e5/white?text=US', tag: tag });
-            }
-        }
-
-        // Service Worker Registration for Production
-        function registerServiceWorker() {
-            if ('serviceWorker' in navigator) {
-                // Check if the protocol is http or https before attempting to register
-                // This prevents errors when previewing in environments using blob: or file: URLs
-                if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
-                    navigator.serviceWorker.register('./sw.js')
-                        .then(registration => {
-                            console.log('ServiceWorker registered with scope:', registration.scope);
-                        })
-                        .catch(error => {
-                            console.error('ServiceWorker registration failed:', error);
-                        });
-                } else {
-                    console.log('ServiceWorker registration skipped: Unsupported protocol. App will use fallback notifications until hosted online.');
-                }
             }
         }
 
